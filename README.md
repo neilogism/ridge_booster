@@ -42,10 +42,10 @@ where $F \in \mathcal{R}^{N \times T}$ is the matrix of tree predictions.
 ## Empirical Results
 
 ### Synthetic Dataset Performance
-![Synthetic Dataset Results](images/synthetic_results.png)
+![Synthetic Dataset Results](images/results_synthetic.png)
 
 ### California Housing Dataset Performance  
-![California Housing Results](images/california_results.png)
+![California Housing Results](images/results_california.png)
 
 ## Key Findings
 
