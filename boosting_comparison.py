@@ -15,11 +15,14 @@ class BoostingComparison:
     A comprehensive comparison framework for different boosting methods.
     """
     
-    def __init__(self, n_estimators: int = 30, max_depth: int = 3, random_state: int = 42):
+    def __init__(self, n_estimators: int = 30, max_depth: int = 3, random_state: int = 42, n_samples: int = 1000, n_features: int = 10, noise: float = 15.0):
         self.n_estimators = n_estimators
         self.max_depth = max_depth
         self.random_state = random_state
         self.results = {}
+        self.n_samples = n_samples
+        self.n_features = n_features
+        self.noise = noise
         
     def load_data(self, dataset_type: str = 'synthetic') -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
@@ -29,7 +32,7 @@ class BoostingComparison:
             dataset_type: 'synthetic' or 'california'
         """
         if dataset_type == 'synthetic':
-            X, y = make_regression(n_samples=1000, n_features=10, noise=15.0, 
+            X, y = make_regression(n_samples=self.n_samples, n_features=self.n_features, noise=self.noise, 
                                  random_state=self.random_state)
         elif dataset_type == 'california':
             california = fetch_california_housing()
@@ -65,7 +68,7 @@ class BoostingComparison:
                 # Build b = F · y_train
                 b = F_mat @ y_train
                 
-                if exact:
+                if not exact:
                     # Solve A·w = b via Conjugate Gradient
                     w, info = cg(A, b, maxiter=1000)
                 else:
@@ -436,36 +439,36 @@ class BoostingComparison:
         
         # Create summary table
         table_data = []
-        table_data.append(['Method', 'Best Val MSE', 'Best Hyperparameter', 'Avg Time (s)'])
+        table_data.append(['Method', 'Best Val MSE', 'Best Hyperparam.', 'Avg Time (s)'])
         
         best_ridge_mse = min(r['val_mse'] for r in results['ridge_exact'])
         best_ridge_param = next(r['lambda'] for r in results['ridge_exact'] if r['val_mse'] == best_ridge_mse)
         ridge_avg_time = np.mean([r['training_time'] for r in results['ridge_exact']])
-        table_data.append(['Ridge', f'{best_ridge_mse:.4f}', f'λ={best_ridge_param}', f'{ridge_avg_time:.2f}'])
+        table_data.append(['Ridge', f'{best_ridge_mse:.4f}', f'λ={best_ridge_param:.4f}', f'{ridge_avg_time:.2f}'])
         
         best_ridge_cg_mse = min(r['val_mse'] for r in results['ridge_cg'])
         best_ridge_cg_param = next(r['lambda'] for r in results['ridge_cg'] if r['val_mse'] == best_ridge_cg_mse)
         ridge_cg_avg_time = np.mean([r['training_time'] for r in results['ridge_cg']])
-        table_data.append(['Ridge CG', f'{best_ridge_cg_mse:.4f}', f'λ={best_ridge_cg_param}', f'{ridge_cg_avg_time:.2f}'])
+        table_data.append(['Ridge CG', f'{best_ridge_cg_mse:.4f}', f'λ={best_ridge_cg_param:.4f}', f'{ridge_cg_avg_time:.2f}'])
         
         best_fixed_mse = min(r['val_mse'] for r in results['fixed_lr'])
         best_fixed_param = next(r['learning_rate'] for r in results['fixed_lr'] if r['val_mse'] == best_fixed_mse)
         fixed_avg_time = np.mean([r['training_time'] for r in results['fixed_lr']])
-        table_data.append(['Fixed LR', f'{best_fixed_mse:.4f}', f'lr={best_fixed_param}', f'{fixed_avg_time:.2f}'])
+        table_data.append(['Fixed LR', f'{best_fixed_mse:.4f}', f'lr={best_fixed_param:.4f}', f'{fixed_avg_time:.2f}'])
         
         best_greedy_mse = min(r['val_mse'] for r in results['greedy_reweight'])
         best_greedy_param = next(r['lambda'] for r in results['greedy_reweight'] if r['val_mse'] == best_greedy_mse)
         greedy_avg_time = np.mean([r['training_time'] for r in results['greedy_reweight']])
-        table_data.append(['Greedy', f'{best_greedy_mse:.4f}', f'λ={best_greedy_param}', f'{greedy_avg_time:.2f}'])
+        table_data.append(['Greedy', f'{best_greedy_mse:.4f}', f'λ={best_greedy_param:.4f}', f'{greedy_avg_time:.2f}'])
         
         table = ax6.table(cellText=table_data[1:], colLabels=table_data[0],
                          cellLoc='center', loc='center')
         table.auto_set_font_size(False)
-        table.set_fontsize(10)
-        table.scale(1.2, 1.5)
+        table.set_fontsize(8)
+        table.scale(1.2, 3)
         ax6.set_title('Performance Summary')
         
-        plt.tight_layout()
+        plt.tight_layout(pad=3.0)
         plt.show()
 
 

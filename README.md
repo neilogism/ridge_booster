@@ -10,30 +10,50 @@ Traditional gradient boosting applies fixed learning rates to all ensemble membe
 
 ## Solution Approach
 
-### Mathematical Formulation
+### Traditional Gradient Boosting Background
 
-At iteration T, the model prediction is:
-$$y^{(T)} = \sum_{t=1}^{T} \omega_t f_t(x)$$
+Traditional gradient boosting builds an ensemble sequentially by fitting each new tree to the residuals of the previous ensemble. At iteration $t$, the process follows:
+
+1. **Compute residuals**: $r_i = y_i - F_{t-1}(x_i)$ where $F_{t-1}$ is the current ensemble
+2. **Fit weak learner**: Train tree $h_t(x)$ to predict residuals $r_i$
+3. **Update ensemble**: $F_t(x) = F_{t-1}(x) + \eta \cdot h_t(x)$
+
+The learning rate $\eta$ is typically fixed (e.g., 0.1) and chosen through manual hyperparameter tuning. This approach treats each tree's contribution as predetermined by the learning rate, regardless of the tree's actual predictive value.
+
+### Ridge Booster Mathematical Formulation
+
+Ridge Booster departs from this fixed-weight approach by solving for optimal tree contributions globally. At iteration T, the model prediction is:
+$y^{(T)} = \sum_{t=1}^{T} \omega_t f_t(x)$
 
 Instead of using fixed weights, Ridge Booster solves the regularized optimization problem:
-$$L(\omega) = || y - \sum_{t=1}^{T} \omega_t f_t(x)||^2 + \lambda ||\omega||^2$$
+$L(\omega) = \| y - \sum_{t=1}^{T} \omega_t f_t(x)\|^2 + \lambda \|\omega\|^2$
 
 The optimal weights are found via:
-$$\omega = (F^{\top}F + \lambda I)^{-1}F^{\top}y$$
+$\omega = (F^{\top}F + \lambda I)^{-1}F^{\top}y$
 
-where $$F \in \mathbb{R}^{N \times T}$$
+where $F \in \mathcal{R}^{N \times T}$ is the matrix of tree predictions.
+
 ### Implementation Variants
 
 **Closed-form Ridge Solution**: Direct matrix inversion for exact optimization
 **Greedy Reweighting**: Independent weight optimization using scipy.optimize.minimize  
 **Conjugate Gradient Approximation**: Numerically stable alternative using iterative CG solver
 
-## Key Results
+## Empirical Results
 
-- **Reduced hyperparameter sensitivity**: Ridge variants showed less sensitivity to hyperparameter selection compared to traditional methods
-- **Comparable accuracy**: Best-case performance matches traditional gradient boosting while requiring less manual tuning
-- **Improved stability**: Adaptive reweighting provides inherent regularization, particularly beneficial on noisy datasets
-- **Faster convergence**: Demonstrated accelerated learning curves on synthetic datasets with high noise variance
+### Synthetic Dataset Performance
+![Synthetic Dataset Results](images/synthetic_results.png)
+
+### California Housing Dataset Performance  
+![California Housing Results](images/california_results.png)
+
+## Key Findings
+
+- **Reduced hyperparameter sensitivity**: Ridge variants (purple/orange lines) show flatter validation curves compared to Fixed LR, indicating less sensitivity to hyperparameter selection
+- **Comparable best-case accuracy**: Ridge CG achieves MSE of 0.287 vs Fixed LR's 0.270 on California housing, demonstrating competitive performance
+- **Improved convergence**: Ridge variants show faster initial learning on synthetic data, reaching lower MSE in fewer iterations
+- **Numerical stability**: Conjugate Gradient variant maintains performance while avoiding matrix inversion instabilities
+- **Training efficiency**: Ridge methods achieve comparable training times (1.17-1.32s) to traditional approaches while requiring less hyperparameter tuning
 
 ## Technical Implementation
 
@@ -55,25 +75,23 @@ This methodology could benefit:
 - **Resource-constrained environments** where manual tuning isn't feasible
 - **Research applications** exploring adaptive ensemble methods
 
+## Repository Structure
 
-## Installation & Usage
-
-```python
-from ridge_boosting import RidgeBooster
-
-# Initialize model
-model = RidgeBooster(method='conjugate_gradient', reg_lambda=0.1)
-
-# Train model
-model.fit(X_train, y_train)
-
-# Make predictions
-y_pred = model.predict(X_test)
+```
+ridge-booster/
+├── src/
+│   ├── ridge_boosting.py      # Core algorithm implementations
+│   ├── benchmarking.py        # Evaluation framework
+│   └── utils.py               # Helper functions
+├── notebooks/
+│   └── evaluation.ipynb       # Results analysis and visualization
+├── data/
+│   └── results/               # Experimental outputs
+└── README.md                  # This document
 ```
 
 ## Future Directions
-
-- Extension to classification tasks using logistic loss functions
-- Online/incremental learning variants for streaming data
 - Integration with modern boosting frameworks (XGBoost, LightGBM)
 - Theoretical convergence analysis for CG approximation
+
+---
