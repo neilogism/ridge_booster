@@ -56,7 +56,7 @@ def process_results(results, noise_values, lambda_values, learning_rates):
             processed['fixed_lr']['noise'].append(noise)
             processed['fixed_lr']['train_mse_best'].append(best_result['train_mse'])
             processed['fixed_lr']['val_mse_best'].append(best_result['val_mse'])
-            best_overfitting = min([x['val_mse'] - x['train_mse'] for x in ridge_by_noise[noise]])
+            best_overfitting = min([x['val_mse'] - x['train_mse'] for x in lr_by_noise[noise]])
             processed['fixed_lr']['overfitting_best'].append(
                 best_overfitting
             )
