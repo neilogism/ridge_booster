@@ -68,7 +68,7 @@ The ridge booster specification was implemented in Python and compared to sklear
 - **Generalizability**: Current formulation applies to regression problems but not classification problems. It also assumes a loss function with a quadratic form.
 - **Numerical stability**: Closed-form solution sensitive to ill-conditioned matrices (mitigated by CG variant)
 - **Performance on Noisy Datasets**
-Empirical testing on synthetic data shows that a fixed learning rate 'control' booster performing better than the experimental ridge booster on noisy data. As a Gaussian noise parameter is scaled up on a synthetic dataset, the control booster outperforms the experimental booster in terms of average-case MSE, worse-case MSE, and overfitting (validation MSE - training MSE) (crossover point is around a standard deviation of 100).
+Empirical testing on synthetic data shows a fixed learning rate 'control' booster performing better than the experimental ridge booster on noisy data. As a Gaussian noise parameter was scaled up on a synthetic dataset, the control booster outperformed the experimental booster in terms of average-case MSE, worse-case MSE, and overfitting (validation MSE - training MSE) (crossover point is around a standard deviation of 100).
 
 
 ## Applications
