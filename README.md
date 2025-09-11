@@ -2,7 +2,7 @@
 
 ## Overview
 
-Ridge Booster is a novel gradient boosting variant that uses ridge regression to adaptively determine optimal tree weights in ensemble models. Unlike traditional gradient boosting methods that rely on fixed learning rates or greedy weight updates, this approach solves for a globally optimal set of tree contributions, potentially reducing hyperparameter sensitivity and manual tuning requirements.
+Ridge Booster is a novel gradient boosting variant that uses ridge regression to adaptively determine optimal tree weights in ensemble models. Unlike traditional gradient boosting methods that rely on fixed learning rates or greedy weight updates, this approach solves for a globally optimal set of tree contributions, potentially increasing training efficiency while reducing hyperparameter sensitivity and manual tuning requirements.
 
 ### Traditional Gradient Boosting Background
 
@@ -33,13 +33,19 @@ where $F \in \mathcal{R}^{N \times T}$ is the matrix of tree predictions.
 **Greedy Reweighting**: Independent weight optimization using scipy.optimize.minimize  
 **Conjugate Gradient Approximation**: Numerically stable alternative using iterative CG solver
 
+## Methodology Summary
+The ridge booster specification was implemented in Python and compared to sklearn's decision tree regressor implementation with respect to a variety of performance metrics. These included mean-square error (MSE), overfitting (training MSE - validation MSE), and training time. In addition to these comparative metrics, matrix condition number analysis was performed specifically on the ridge booster to assess the its numerical stability. Figures were generated to visualize and quantify the effects of variables such as hyperparameters and dataset properties (i.e. standard deviations of the training and test datasets) on performance.
+
 ## Empirical Results
 
 ### Synthetic Dataset Performance
-![Synthetic Dataset Results](images/results_synthetic.png)
+![Synthetic Dataset Results](data/images/results_synthetic.png)
 
 ### California Housing Dataset Performance  
-![California Housing Results](images/results_california.png)
+![California Housing Results](data/images/results_california.png)
+
+### Results of Noise Analysis 
+![California Housing Results](data/images/results_california.png)
 
 ## Key Findings
 
@@ -47,7 +53,7 @@ where $F \in \mathcal{R}^{N \times T}$ is the matrix of tree predictions.
 - **Comparable best-case accuracy**: Ridge CG achieves MSE of 0.287 vs Fixed LR's 0.270 on California housing, and MSE of 1610 vs Fixed LR's 1651 on the synthetic dataset, demonstrating competitive best-case accuracy.
 - **Improved convergence**: Ridge variants show faster initial learning on synthetic data, reaching lower MSE in fewer iterations
 - **Numerical stability**: Conjugate Gradient variant maintains performance while avoiding matrix inversion instabilities
-- **Training efficiency**: Ridge methods achieve comparable training times for the same number of iterations (1.17-1.32s) to traditional approaches while requiring less hyperparameter tuning and requiring fewer iterations to achieve lower MSE values. 
+- **Training efficiency**: In addition to the faster convergence mentioned above, ridge methods achieve comparable training times for the same number of iterations (1.17-1.32s) to traditional approaches while requiring less hyperparameter tuning and requiring fewer iterations to achieve lower MSE values. 
 
 ## Technical Implementation
 
@@ -58,33 +64,38 @@ where $F \in \mathcal{R}^{N \times T}$ is the matrix of tree predictions.
 
 ## Limitations
 
-- **Computational complexity**: Matrix operations scale as O(T²) in memory and O(T³) in computation, limiting practical use to ensembles with <500 trees
-- **Regression only**: Current formulation applies to regression problems but not classification problems. 
+- **Computational complexity**: Solving the ridge system involves matrix operations that scale as O(T²) in memory and O(T³) in computation, making the method impractical for very large ensembles (> 1000 trees)
+- **Generalizability**: Current formulation applies to regression problems but not classification problems. It also assumes a loss function with a quadratic form.
 - **Numerical stability**: Closed-form solution sensitive to ill-conditioned matrices (mitigated by CG variant)
+- **Performance on Noisy Datasets**
+Empirical testing on synthetic data shows that a fixed learning rate 'control' booster performing better than the experimental ridge booster on noisy data. As a Gaussian noise parameter is scaled up on a synthetic dataset, the control booster outperforms the experimental booster in terms of average-case MSE, worse-case MSE, and overfitting (validation MSE - training MSE) (crossover point is around a standard deviation of 100).
+
 
 ## Applications
 
 This methodology could benefit:
-- **Automated ML pipelines** where hyperparameter tuning overhead is expensive
 - **Research applications** exploring adaptive ensemble methods
+- **Automated ML pipelines** where hyperparameter tuning overhead is expensive
+- **Regression Analysis** on datasets with suitable properties (std < 100, sample sizes under 1000)
 
 ## Repository Structure
 
 ```
 ridge-booster/
 ├── src/
-│   ├── ridge_boosting.py      # Core algorithm implementations
-│   ├── benchmarking.py        # Evaluation framework
-│   └── utils.py               # Helper functions
-├── notebooks/
-│   └── evaluation.ipynb       # Results analysis and visualization
+│   ├── ridge_booster.py       # Core algorithm implementation
+│   ├── boosting_comparison.py # Evaluation framework
+│   └── noise_analysis.py # for analyzing variance effects in training+test data
 ├── data/
-│   └── results/               # Experimental outputs
+│   └── images/               # Experimental outputs
 └── README.md                  # This document
 ```
 
 ## Future Directions
 - Theoretical convergence analysis for CG approximation
-- Integration with modern boosting frameworks (XGBoost, LightGBM)
+- More rigorous hypothesis testing
+- Test on more real-world datasets
 - Early stopping criteria to decrease training time
+- Integration with modern boosting frameworks (XGBoost, LightGBM)
+
 ---
