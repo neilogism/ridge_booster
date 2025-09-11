@@ -64,7 +64,7 @@ The ridge booster specification was implemented in Python and compared to sklear
 
 ## Limitations
 
-- **Computational complexity**: Solving the ridge system involves matrix operations that scale as O(T²) in memory and O(T³) in computation, making the method impractical for very large ensembles (> 1000 trees)
+- **Computational complexity**: Solving the ridge system involves matrix operations that scale as O(T²) in memory and O(T³) in computation, making the method impractical for very large ensembles (loosely > 1000 trees)
 - **Generalizability**: Current formulation applies to regression problems but not classification problems. It also assumes a loss function with a quadratic form.
 - **Numerical stability**: Closed-form solution sensitive to ill-conditioned matrices (mitigated by CG variant)
 - **Performance on Noisy Datasets**
