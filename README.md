@@ -74,9 +74,9 @@ Empirical testing on synthetic data shows a fixed learning rate 'control' booste
 ## Applications
 
 This methodology could benefit:
+- **Regression Analysis** on datasets with suitable properties (e.g. std < 100, sample sizes under 1000)
 - **Research applications** exploring adaptive ensemble methods
 - **Automated ML pipelines** where hyperparameter tuning overhead is expensive
-- **Regression Analysis** on datasets with suitable properties (std < 100, sample sizes under 1000)
 
 ## Repository Structure
 
