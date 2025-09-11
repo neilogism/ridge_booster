@@ -76,7 +76,7 @@ Empirical testing on synthetic data shows a fixed learning rate 'control' booste
 This methodology could benefit:
 - **Regression Analysis** on datasets with suitable properties (e.g. std < 100, < 1000 iterations needed to converge)
 - **Research applications** exploring adaptive ensemble methods
-- **Automated ML pipelines** where hyperparameter tuning overhead is expensive
+- **Automated ML pipelines** where manual hyperparameter tuning is impractical
 
 ## Repository Structure
 
