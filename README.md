@@ -45,7 +45,7 @@ The ridge booster specification was implemented in Python and compared to sklear
 ![California Housing Results](data/images/results_california.png)
 
 ### Results of Noise Analysis 
-![California Housing Results](data/images/results_california.png)
+![California Housing Results](data/images/noise_analysis.png)
 
 ## Key Findings
 
