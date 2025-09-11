@@ -34,7 +34,7 @@ where $F \in \mathcal{R}^{N \times T}$ is the matrix of tree predictions.
 **Conjugate Gradient Approximation**: Numerically stable alternative using iterative CG solver
 
 ## Methodology Summary
-The ridge booster specification was implemented in Python and compared to sklearn's decision tree regressor implementation with respect to a variety of performance metrics. These included mean-square error (MSE), overfitting (training MSE - validation MSE), and training time. In addition to these comparative metrics, matrix condition number analysis was performed specifically on the ridge booster to assess its numerical stability. Figures were generated to visualize and quantify the effects of variables such as hyperparameters and dataset properties (i.e. standard deviations of the training and test datasets) on performance.
+The ridge booster specification was implemented in Python and compared to sklearn's decision tree regressor implementation with respect to a variety of performance metrics. These included mean-square error (MSE), overfitting (validation MSE - training MSE), and training time. In addition to these comparative metrics, matrix condition number analysis was performed specifically on the ridge booster to assess its numerical stability. Figures were generated to visualize and quantify the effects of variables such as hyperparameters and dataset properties (i.e. standard deviations of the training and test datasets) on performance.
 
 ## Empirical Results
 
