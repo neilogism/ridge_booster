@@ -18,7 +18,7 @@ The learning rate $\eta$ is typically fixed (e.g., 0.1) and chosen a priori or t
 
 ### Ridge Booster Mathematical Formulation
 
-Ridge Booster departs from this fixed-weight approach by solving for optimal tree contributions globally. At iteration T, the model prediction is:
+Ridge Booster departs from this fixed-weight approach by solving for optimal tree contributions globally. At iteration T, the series of model predictions is:
 $\sum_{i=1}^{N} y_i^{(T)} = \sum_{i=1}^{N} \sum_{t=1}^{T} \omega_t f_t(x_i)$
 
 Instead of using fixed weights, Ridge Booster solves the regularized optimization problem:
