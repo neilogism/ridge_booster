@@ -20,7 +20,7 @@ Ridge Booster departs from this fixed-weight approach by solving for optimal tre
 $\sum_{i=1}^{N} y_i^{(T)} = \sum_{i=1}^{N} \sum_{t=1}^{T} \omega_t f_t(x_i)$
 
 Instead of using fixed weights, Ridge Booster solves the regularized optimization problem:
-$L(\omega) = \| \sum_{i=1}^{N} y_i - \sum_{t=1}^{T} \omega_t f_t(x_i)\|^2 + \lambda \|\omega\|^2$
+$L(\omega) = \\sum_{i=1}^{N}| y_i - \sum_{t=1}^{T} \omega_t f_t(x_i)\|^2 + \lambda \|\omega\|^2$
 
 The optimal weights are found via:
 $\omega = (F^{\top}F + \lambda I)^{-1}F^{\top}y$
