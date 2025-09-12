@@ -96,6 +96,7 @@ ridge-booster/
 ## Future Directions
 - Theoretical convergence analysis for CG approximation
 - More rigorous hypothesis testing
+- Tracking and analysis of model weight evolution
 - Test on more real-world datasets
 - Early stopping criteria to decrease training time
 - Integration with modern boosting frameworks (XGBoost, LightGBM)
