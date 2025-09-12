@@ -12,7 +12,7 @@ Traditional gradient boosting regression models train a series of 'weak learners
 2. **Compute residuals**: $r_i = y_i - F_{t-1}(x_i)$ where $F_{t-1}$ is the current ensemble
 3. **Fit weak learner**: Train tree $h_t(x)$ to predict residuals $r_i$.
 4. **Update ensemble**: $F_t(x) = F_{t-1}(x) + \eta \cdot h_t(x)$
-5. **Repeat steps 2-5 until stopping criterion is reached**
+5. **Repeat steps 2-4 until stopping criterion is reached**
 
 The learning rate $\eta$ is typically fixed (e.g., 0.1) and chosen a priori or through manual hyperparameter tuning. This approach treats each tree's contribution as predetermined by the learning rate, regardless of the tree's actual predictive value.
 
