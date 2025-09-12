@@ -1,300 +1,113 @@
-from boosting_comparison import BoostingComparison
 import numpy as np
+from sklearn.datasets import make_regression, fetch_california_housing
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.metrics import mean_squared_error
 import matplotlib.pyplot as plt
-import pandas as pd
-from collections import defaultdict
 
-def process_results(results, noise_values, lambda_values, learning_rates):
-    """
-    Process the results dictionary to extract best performance for each noise level
-    """
-    processed = {
-        'ridge_exact': {'noise': [], 'train_mse_avg': [], 'val_mse_avg': [], 'overfitting_avg': [],  'train_mse_best': [], 'val_mse_best': [], 'overfitting_best': [], 'overfitting_at_best_val': [], 'overfitting': [], 'val_mse': []},
-        'fixed_lr': {'noise': [], 'train_mse_avg': [], 'val_mse_avg': [], 'overfitting_avg': [],  'train_mse_best': [], 'val_mse_best': [], 'overfitting_best': [], 'overfitting_at_best_val': [], 'overfitting': [], 'val_mse': []}
-    }
-    
-    # Group results by noise level for ridge_exact
-    ridge_by_noise = defaultdict(list)
-    for result in results['ridge_exact']:
-        ridge_by_noise[result['noise']].append(result)
-    
-    # Find best lambda for each noise level (minimize validation MSE)
-    for noise in noise_values:
-        if noise in ridge_by_noise:
-            best_result = min(ridge_by_noise[noise], key=lambda x: x['val_mse'])
-            val_mse = [x['val_mse'] for x in ridge_by_noise[noise]]
-            avg_val_mse=sum(val_mse)/len(val_mse)
-            avg_train_mse = sum([x['train_mse'] for x in ridge_by_noise[noise]])/len([x['train_mse'] for x in ridge_by_noise[noise]])
-            overfitting = [x['val_mse'] - x['train_mse'] for x in ridge_by_noise[noise]]
-            avg_overfitting = sum(overfitting)/len(overfitting)            
-            processed['ridge_exact']['noise'].append(noise)
-            processed['ridge_exact']['train_mse_best'].append(best_result['train_mse'])
-            processed['ridge_exact']['val_mse_best'].append(best_result['val_mse'])
-            processed['ridge_exact']['overfitting_at_best_val'].append(
-                best_result['val_mse'] - best_result['train_mse']
-            )
-            best_overfitting = min(overfitting)
-            processed['ridge_exact']['overfitting_best'].append(best_overfitting)
-            processed['ridge_exact']['train_mse_avg'].append(avg_train_mse)
-            processed['ridge_exact']['val_mse_avg'].append(avg_val_mse)
-            processed['ridge_exact']['overfitting_avg'].append(
-                avg_overfitting
-            )
-            processed['ridge_exact']['overfitting'].append(overfitting)
-            processed['ridge_exact']['val_mse'].append(val_mse)
+# 1) Create a synthetic regression dataset
+X, y = make_regression(n_samples=1000, n_features=10, noise=15.0, random_state=42)
+X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.3, random_state=42)
+
+# 2) load a real regression dataset
+# california = fetch_california_housing()
+# X, y = california.data, california.target
+# X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.3, random_state=42)
 
 
-    # Group results by noise level for fixed_lr
-    lr_by_noise = defaultdict(list)
-    for result in results['fixed_lr']:
-        lr_by_noise[result['noise']].append(result)
-    
-    # Find best learning rate for each noise level
-    for noise in noise_values:
-        if noise in lr_by_noise:
-            best_result = min(lr_by_noise[noise], key=lambda x: x['val_mse'])
-            processed['fixed_lr']['noise'].append(noise)
-            processed['fixed_lr']['train_mse_best'].append(best_result['train_mse'])
-            processed['fixed_lr']['val_mse_best'].append(best_result['val_mse'])
-            best_overfitting = min([x['val_mse'] - x['train_mse'] for x in ridge_by_noise[noise]])
-            processed['fixed_lr']['overfitting_best'].append(
-                best_overfitting
-            )
-            val_mse = [x['val_mse'] for x in ridge_by_noise[noise]]
-            avg_val_mse=sum(val_mse)/len(val_mse)
-            avg_train_mse = sum([x['train_mse'] for x in lr_by_noise[noise]])/len([x['train_mse'] for x in lr_by_noise[noise]])
-            overfitting = [x['val_mse'] - x['train_mse'] for x in lr_by_noise[noise]]
-            avg_overfitting = sum(overfitting)/len(overfitting)
-            processed['fixed_lr']['overfitting_at_best_val'].append(
-                best_result['val_mse'] - best_result['train_mse']
-            )
-            processed['fixed_lr']['val_mse_avg'].append(avg_val_mse)
-            processed['fixed_lr']['train_mse_avg'].append(avg_train_mse)
-            processed['fixed_lr']['overfitting_avg'].append(
-                avg_overfitting
-            )
-            processed['fixed_lr']['overfitting'].append(overfitting)
-            processed['fixed_lr']['val_mse'].append(val_mse)
+# 2) Common parameters
+n_estimators = 30
+max_depth    = 3
 
-    return processed
+# 3) Choose a set of lambda values to explore (from 10^0 up to 10^6)
+lambda_values = np.logspace(2, 6, 20)  # [1, 10, 100, 1e3, 1e4, 1e5, 1e6]
 
-def create_noise_analysis_plots(results, noise_values, lambda_values, learning_rates):
-    """
-    Create three plots analyzing the effect of noise on model performance
-    """
-    # Process results to get best performance at each noise level
-    processed = process_results(results, noise_values, lambda_values, learning_rates)
-    
-    # Create figure with three subplots
-    fig, axes = plt.subplots(2, 3, figsize=(18, 5))
-    
-    # Top row: Best Case Performance
-    # Plot 1: Validation MSE vs Noise (Best Case)
-    axes[0, 0].loglog(processed['ridge_exact']['noise'], processed['ridge_exact']['val_mse_best'], 
-                      'o-', label='Ridge Exact', linewidth=2, markersize=6)
-    axes[0, 0].loglog(processed['fixed_lr']['noise'], processed['fixed_lr']['val_mse_best'], 
-                      's-', label='Fixed LR', linewidth=2, markersize=6)
-    axes[0, 0].set_xlabel('Noise Level')
-    axes[0, 0].set_ylabel('Validation MSE')
-    axes[0, 0].set_title('Validation MSE vs Noise Level (Best Case)')
-    axes[0, 0].legend()
-    axes[0, 0].grid(True, alpha=0.3)
-    
-    # Plot 2: Training MSE vs Noise (Best Case)
-    axes[0, 1].loglog(processed['ridge_exact']['noise'], processed['ridge_exact']['train_mse_best'], 
-                      'o-', label='Ridge Exact', linewidth=2, markersize=6)
-    axes[0, 1].loglog(processed['fixed_lr']['noise'], processed['fixed_lr']['train_mse_best'], 
-                      's-', label='Fixed LR', linewidth=2, markersize=6)
-    axes[0, 1].set_xlabel('Noise Level')
-    axes[0, 1].set_ylabel('Training MSE')
-    axes[0, 1].set_title('Training MSE vs Noise Level (Best Case)')
-    axes[0, 1].legend()
-    axes[0, 1].grid(True, alpha=0.3)
-    
-    # Plot 3: Overfitting vs Noise (Best Case)
-    axes[0, 2].loglog(processed['ridge_exact']['noise'], processed['ridge_exact']['overfitting_best'], 
-                      'o-', label='Ridge Exact', linewidth=2, markersize=6)
-    axes[0, 2].loglog(processed['fixed_lr']['noise'], processed['fixed_lr']['overfitting_best'], 
-                      's-', label='Fixed LR', linewidth=2, markersize=6)
-    axes[0, 2].set_xlabel('Noise Level')
-    axes[0, 2].set_ylabel('Overfitting (Val MSE - Train MSE)')
-    axes[0, 2].set_title('Overfitting vs Noise Level (Best Case)')
-    axes[0, 2].legend()
-    axes[0, 2].grid(True, alpha=0.3)
-    
-    
-    # # Plot 4: Overfitting vs Noise (Best Case)
-    # for x,y in zip(processed['ridge_exact']['overfitting'], processed['ridge_exact']['val_mse']):
-    #     axes[0, 3].loglog(x, y, 
-    #                     'o-', label='Ridge Exact', linewidth=2, markersize=6)
-    
-    # for x,y in zip(processed['fixed_lr']['overfitting'], processed['fixed_lr']['val_mse']):
-    #     axes[0, 3].loglog(x, y, 's-', label='Fixed LR', linewidth=2, markersize=6)
-    
-    
-    # axes[0,3].set_xlabel('Overfitting (Val MSE - Train MSE')
-    # axes[0, 3].set_ylabel('Val MSE')
-    # axes[0, 3].set_title('Overfitting vs Val MSE')
-    # # axes[0, 3].legend()
-    # axes[0, 3].grid(True, alpha=0.3)
+# Containers for results
+cond_numbers = []     # Condition number of (F·F^T + λ I)
+train_mses   = []     # Final training MSE
+val_mses     = []     # Final validation MSE
 
-    
-    
-    
-    # Bottom row: Average Case Performance
-    # Plot 5: Validation MSE vs Noise (Average Case)
-    axes[1, 0].loglog(processed['ridge_exact']['noise'], processed['ridge_exact']['val_mse_avg'], 
-                      'o-', label='Ridge Exact', linewidth=2, markersize=6)
-    axes[1, 0].loglog(processed['fixed_lr']['noise'], processed['fixed_lr']['val_mse_avg'], 
-                      's-', label='Fixed LR', linewidth=2, markersize=6)
-    axes[1, 0].set_xlabel('Noise Level')
-    axes[1, 0].set_ylabel('Validation MSE')
-    axes[1, 0].set_title('Validation MSE vs Noise Level (Avg. Case)')
-    axes[1, 0].legend()
-    axes[1, 0].grid(True, alpha=0.3)
-    
-    # Plot 6: Training MSE vs Noise (Average Case)
-    axes[1, 1].loglog(processed['ridge_exact']['noise'], processed['ridge_exact']['train_mse_avg'], 
-                      'o-', label='Ridge Exact', linewidth=2, markersize=6)
-    axes[1, 1].loglog(processed['fixed_lr']['noise'], processed['fixed_lr']['train_mse_avg'], 
-                      's-', label='Fixed LR', linewidth=2, markersize=6)
-    axes[1, 1].set_xlabel('Noise Level')
-    axes[1, 1].set_ylabel('Training MSE')
-    axes[1, 1].set_title('Training MSE vs Noise Level (Avg. Case)')
-    axes[1, 1].legend()
-    axes[1, 1].grid(True, alpha=0.3)
-    
-    # Plot 7: Overfitting vs Noise (Average Case)
-    axes[1, 2].loglog(processed['ridge_exact']['noise'], processed['ridge_exact']['overfitting_avg'], 
-                      'o-', label='Ridge Exact', linewidth=2, markersize=6)
-    axes[1, 2].loglog(processed['fixed_lr']['noise'], processed['fixed_lr']['overfitting_avg'], 
-                      's-', label='Fixed LR', linewidth=2, markersize=6)
-    axes[1, 2].set_xlabel('Noise Level')
-    axes[1, 2].set_ylabel('Overfitting (Val MSE - Train MSE)')
-    axes[1, 2].set_title('Overfitting vs Noise Level (Avg. Case)')
-    axes[1, 2].legend()
-    axes[1, 2].grid(True, alpha=0.3)
-    
-    plt.tight_layout()
-    
-    # axes[1,3].grid(True, alpha=0.3)
-    # return fig
-    
-    
-    # axes[1, 3].loglog(processed['ridge_exact']['noise'], processed['ridge_exact']['overfitting_at_best_val'], 
-    #                   'o-', label='Ridge Exact', linewidth=2, markersize=6)
-    # axes[1, 3].loglog(processed['fixed_lr']['noise'], processed['fixed_lr']['overfitting_at_best_val'], 
-    #                   's-', label='Fixed LR', linewidth=2, markersize=6)
-    # axes[1,3].set_xlabel("Noise Level")
-    # axes[1,3].set_ylabel("Overfitting (Val MSE - Train MSE)")
-    # axes[1,3].set_title("Overfitting vs Noise Level at Best Val")
-    # # axes[1,3].legend()
-    # plt.tight_layout()
-    # axes[1,3].grid(True, alpha=0.3)
-    return fig
+for lambda_reg in lambda_values:
+    # ---- Build the ensemble, stagewise ----
+    F_train = []  # list of shape (n_trees, n_samples_train)
+    F_val   = []  # list of shape (n_trees, n_samples_val)
 
-# Additional analysis: Statistical comparison
-def compare_methods(results, noise_values):
-    """Compare ridge vs fixed LR across noise levels"""
-    processed = process_results(results, noise_values, lambda_values, learning_rates)
-    
-    ridge_data = processed['ridge_exact']
-    lr_data = processed['fixed_lr']
-    
-    # Ensure we have the same noise values for comparison
-    common_noise = set(ridge_data['noise']) & set(lr_data['noise'])
-    
-    ridge_better_count = 0
-    total_comparisons = 0
-    
-    for noise in common_noise:
-        ridge_idx = ridge_data['noise'].index(noise)
-        lr_idx = lr_data['noise'].index(noise)
-        
-        ridge_val = ridge_data['val_mse'][ridge_idx]
-        lr_val = lr_data['val_mse'][lr_idx]
-        
-        if ridge_val < lr_val:
-            ridge_better_count += 1
-        total_comparisons += 1
-    
-    print(f"\nMethod Comparison:")
-    print(f"Ridge Exact performs better in {ridge_better_count}/{total_comparisons} "
-        f"({100*ridge_better_count/total_comparisons:.1f}%) of noise levels")
+    for i in range(n_estimators):
+        if i == 0:
+            # First iteration: no trees yet, so residual = y_train
+            residuals = y_train.copy()
+        else:
+            # Form the matrix F (n_trees × n_samples)
+            F_mat = np.vstack(F_train)  # shape = (i, n_train)
+            # Build A = F · F^T + λ I
+            A = F_mat @ F_mat.T + lambda_reg * np.eye(i)
+            # Build b = F · y_train
+            b = F_mat @ y_train
+
+            # Solve A·w = b
+            w = np.linalg.solve(A, b)
+            # Compute partial prediction on the training set
+            train_pred_partial = w @ F_mat  # shape = (n_train,)
+            # New residual for this iteration
+            residuals = y_train - train_pred_partial
+
+        # Fit a new tree to (X_train, residuals)
+        tree = DecisionTreeRegressor(max_depth=max_depth, random_state=42)
+        tree.fit(X_train, residuals)
+
+        # Save its predictions (f_i) on both train and val
+        f_train = tree.predict(X_train)  # shape = (n_train,)
+        f_val   = tree.predict(X_val)    # shape = (n_val,)
+
+        F_train.append(f_train)
+        F_val.append(f_val)
+
+    # ---- Once all trees are built, do the final CG solve ----
+    F_mat   = np.vstack(F_train)  # shape = (n_trees, n_train)
+    A_final = F_mat @ F_mat.T + lambda_reg * np.eye(n_estimators)
+    b_final = F_mat @ y_train
+
+    # Solve (A_final) w = b_final
+    final_w, info_final = np.linalg.solve(A_final, b_final)
+
+    # Compute condition number of A_final
+    eigvals = np.linalg.eigvalsh(A_final)
+    cond_num = eigvals.max() / eigvals.min()
+    cond_num = np.linalg.cond(A_final)
 
 
-if __name__ == "__main__":
-    features = [100]
-    noise = np.logspace(1, 4, 6)
-    samples = [1000]
-    lambda_values = np.logspace(2, 6, 6)
-    learning_rates = [i/1e6 for i in lambda_values]
-    results = {
-        "ridge_exact": [],
-        'fixed_lr': [],
-    }
-    for i in features:
-        for j in samples:
-            for k in noise:
-                print(f"features: {i}, samples: {j}, noise: {k}")
-                comparison = BoostingComparison(
-                    n_estimators=30, 
-                    max_depth=3, 
-                    random_state=42,
-                    n_features=int(i),
-                    n_samples=int(j),
-                    noise=float(k)
-                )
+    # Compute final predictions & MSE on train/val
+    train_preds = final_w @ F_mat                       # shape = (n_train,)
+    val_preds   = final_w @ np.vstack(F_val)            # shape = (n_val,)
 
-                X_train, X_val, y_train, y_val = comparison.load_data('synthetic')
+    train_mse = mean_squared_error(y_train, train_preds)
+    val_mse   = mean_squared_error(y_val, val_preds)
 
-                for lambda_reg in lambda_values:
-                    result = comparison.ridge_boosting(X_train, y_train, X_val, y_val, lambda_reg, exact=True)
-                    result['noise'] = k
-                    results['ridge_exact'].append(result)
-                    print(f"  λ={lambda_reg:.3f}: Train MSE={result['train_mse']:.4f}, "
-                        f"Val MSE={result['val_mse']:.4f}, "
-                        f"Cond. Num={result['final_condition_number']:.2e}, "
-                        f"Time={result['training_time']:.2f}s")
-                            # Fixed Learning Rate Boosting
+    # Store results
+    cond_numbers.append(cond_num)
+    train_mses.append(train_mse)
+    val_mses.append(val_mse)
 
-                print("\nRunning Fixed Learning Rate Boosting...")
-                for lr in learning_rates:
-                    result = comparison.fixed_lr_boosting(X_train, y_train, X_val, y_val, lr)
-                    result['noise'] = k
-                    results['fixed_lr'].append(result)
-                    print(f"  lr={lr:.3f}: Train MSE={result['train_mse']:.4f}, "
-                        f"Val MSE={result['val_mse']:.4f}, "
-                        f"Time={result['training_time']:.2f}s")
+# ---- Plotting ----
+plt.figure(figsize=(12, 4))
 
-    # Create the plots
-    fig = create_noise_analysis_plots(results, noise, lambda_values, learning_rates)
+# (a) Condition number vs λ
+plt.subplot(1, 2, 1)
+plt.semilogx(lambda_values, cond_numbers, marker='o', color='darkorange')
+plt.title("Condition Number vs. λ (Ridge)")
+plt.xlabel("λ")
+plt.ylabel("Condition Number of (F·Fᵀ + λI)")
+plt.grid(True)
 
-    # Save the figure
-    plt.savefig('images/noise_analysis.png', dpi=300, bbox_inches='tight')
-    plt.show()
+# (b) Train/Val MSE vs λ
+plt.subplot(1, 2, 2)
+plt.semilogx(lambda_values, train_mses, marker='s', label="Train MSE", color='royalblue')
+plt.semilogx(lambda_values, val_mses,   marker='^', label="Val MSE",   color='firebrick')
+plt.title("Train/Validation MSE vs. λ")
+plt.xlabel("λ")
+plt.ylabel("MSE")
+plt.legend()
+plt.grid(True)
 
-    # Optional: Print summary statistics
-    def print_noise_summary(results, noise_values):
-        """Print summary of how methods perform across noise levels"""
-        processed = process_results(results, noise_values, lambda_values, learning_rates)
-        
-        print("Noise Analysis Summary:")
-        print("=" * 50)
-        
-        for method in ['ridge_exact', 'fixed_lr']:
-            data = processed[method]
-            print(f"\n{method.upper()}:")
-            print(f"  Noise range: {min(data['noise']):.1f} - {max(data['noise']):.1f}")
-            print(f"  Val MSE range: {min(data['val_mse']):.3f} - {max(data['val_mse']):.3f}")
-            print(f"  Avg overfitting: {np.mean(data['overfitting']):.3f}")
-            
-            # Find noise level with minimum overfitting
-            min_overfit_idx = np.argmin(data['overfitting'])
-            print(f"  Min overfitting at noise {data['noise'][min_overfit_idx]:.1f}: "
-                f"{data['overfitting'][min_overfit_idx]:.3f}")
-
-    # Run summary
-    print_noise_summary(results, noise)
-
-    compare_methods(results, noise)
+plt.tight_layout()
+plt.show()
