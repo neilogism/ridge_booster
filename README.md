@@ -54,7 +54,6 @@ The ridge booster specification was implemented in Python and compared to sklear
 - **Reduced hyperparameter sensitivity**: Ridge variants (purple/orange lines) show flatter validation curves compared to Fixed LR, indicating less sensitivity to hyperparameter selection
 - **Comparable best-case accuracy**: Ridge CG achieves MSE of 0.287 vs Fixed LR's 0.270 on California housing, and MSE of 1610 vs Fixed LR's 1651 on the synthetic dataset, demonstrating competitive best-case accuracy.
 - **Improved convergence**: Ridge variants show faster initial learning,reaching lower MSE in fewer iterations
-- **Numerical stability did not improve model accuracy**: Conjugate gradient variant maintains similar performance while avoiding matrix inversion instabilities. However, empirical results suggest that numerical stability is not the primary limitation with respect to MSE performance: in practice, the conjugate gradient approximation provided no significant improvement in model accuracy over direct matrix inversion despite its superior numerical stability. 
 - **Training efficiency**: In addition to the faster convergence mentioned above, ridge methods achieve comparable training times for the same number of iterations (1.17-1.32s) to traditional approaches while requiring less hyperparameter tuning and requiring fewer iterations to achieve lower MSE values. 
 
 ## Technical Implementation
@@ -68,7 +67,7 @@ The ridge booster specification was implemented in Python and compared to sklear
 
 - **Computational complexity**: Solving the ridge system involves matrix operations that scale as O(T²) in memory and O(T³) in computation, making the method impractical for very large ensembles (loosely > 1000 trees)
 - **Generalizability**: Current formulation applies to regression problems but not classification problems. It also assumes a loss function with a quadratic form.
-- **Numerical stability**: Closed-form solution sensitive to ill-conditioned matrices (mitigated by CG variant)
+- **Numerical instability**: Closed-form solution sensitive to ill-conditioned matrices (theoretically mitigated by CG variant). However, this effect hasn't been observed in practice: the conjugate gradient variant maintains similar performance while avoiding matrix inversion instabilities. Empirical results suggest that numerical stability is not the primary limitation with respect to MSE performance: the conjugate gradient approximation did not meaningfully improve model accuracy but maintained similar performance to the closed-form variant. 
 - **Performance on Noisy Datasets**
 Empirical testing on synthetic data shows a fixed learning rate 'control' booster performing better than the experimental ridge booster on noisy data. As a Gaussian noise parameter was scaled up on a synthetic dataset, the control booster outperformed the experimental booster in terms of average-case MSE, worse-case MSE, and overfitting (validation MSE - training MSE) (crossover point is around a standard deviation of 100).
 
