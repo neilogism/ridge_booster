@@ -62,7 +62,7 @@ In addition to these comparative metrics, some of the ridge booster's distinct p
 
 ## Key Findings and Limitations
 
-- **Reduced sensitivity of MSE to hyperparameter choices**: Ridge variants (purple/orange lines) show flatter validation curves compared to Fixed LR, indicating less sensitivity to hyperparameter selection
+- **Reduced sensitivity of MSE to hyperparameter choices**: Ridge variants (purple/orange lines in first and second figures) show flatter validation curves compared to Fixed LR, indicating less sensitivity to hyperparameter selection
 - **Comparable best-case accuracy**: Ridge CG achieves MSE of 0.287 vs Fixed LR's 0.270 on California housing, and MSE of 1610 vs Fixed LR's 1651 on the synthetic dataset, demonstrating competitive best-case accuracy.
 - **Improved convergence under certain conditions**: Ridge variants show faster initial learning on datasets with low noise (roughly speaking, this means a Gaussian noise process with a standard deviation under 100), reaching lower MSE in fewer iterations.
 - **Training efficiency**: In addition to the faster convergence mentioned above, ridge methods achieve comparable training times for the same number of iterations (1.17-1.32s) to traditional approaches while requiring less hyperparameter tuning and requiring fewer iterations to achieve lower MSE values. 
