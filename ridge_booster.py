@@ -5,109 +5,154 @@ from sklearn.tree import DecisionTreeRegressor
 from sklearn.metrics import mean_squared_error
 import matplotlib.pyplot as plt
 
-# 1) Create a synthetic regression dataset
-X, y = make_regression(n_samples=1000, n_features=10, noise=15.0, random_state=42)
-X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.3, random_state=42)
+class RidgeBooster:
+    def __init__(self, X_train, X_val, y_train, y_val, lambda_reg, n_estimators, max_depth):
+        self.X_train = X_train
+        self.X_val = X_val
+        self.y_train = y_train
+        self.y_val = y_val
+        self.lambda_reg = lambda_reg
+        self.n_estimators = n_estimators
+        self.max_depth = max_depth
+    
 
-# 2) load a real regression dataset
-# california = fetch_california_housing()
-# X, y = california.data, california.target
-# X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.3, random_state=42)
+    def fit_model(self):
+        self.cond_number = None     # matrix condition number of (F·F^T + λ I) (max eigenvalue / min eigenvalue)
+        self.train_mse   = None     # final training MSE
+        self.val_mse     = None     # final validation MSE
 
+        F_train = []  # list of shape (num_trees, training_data_sample_size)
+        F_val   = []  # list of shape (num_trees, validation_data_sample_size)
+            
+        # store per-iteration weights
+        self.iteration_weights = []
+        
+        # use mean model to get a baseline MSE for comparison with model MSEs        
+        mean_pred = np.mean(self.y_train)
+        baseline_train_mse = mean_squared_error(self.y_train, np.full_like(self.y_train, mean_pred))
+        baseline_val_mse = mean_squared_error(self.y_val, np.full_like(self.y_val, mean_pred))
+        print(f"Baseline MSE - Train: {baseline_train_mse:.2f}, Val: {baseline_val_mse:.2f}")
+        self.iteration_train_mse = [baseline_train_mse]
+        self.iteration_val_mse = [baseline_val_mse]
 
-# 2) Common parameters
-n_estimators = 30
-max_depth    = 3
+        for i in range(self.n_estimators):
+            if i == 0:
+                # The first iteration trains the first tree to y_train.
+                # Subsequent iterations will train to residuals of the ensemble's predictions from the previous iteration.
+                residuals = self.y_train.copy()
+            else:
+                # Form the matrix F (T_trees × N_samples)
+                F_mat = np.vstack(F_train)
+                # Build A = F · F^T + λ I
+                A = F_mat @ F_mat.T + self.lambda_reg * np.eye(i)
+                # Build b = F · y_train
+                b = F_mat @ self.y_train
+                # Solve A·w = b
+                w = np.linalg.solve(A, b)
+                # compute training and validation predictions on the training set
+                train_pred = F_mat.T @ w
+                val_pred = np.vstack(F_val[:i]).T @ w
+                # compute and store history of MSEs for post-training analysis
+                current_train_mse = mean_squared_error(self.y_train, train_pred)
+                current_val_mse = mean_squared_error(self.y_val, val_pred)
+                self.iteration_train_mse.append(current_train_mse)
+                self.iteration_val_mse.append(current_val_mse)
+                
+                # New residual for this iteration
+                residuals = self.y_train - train_pred
+                
+                # track weight evolution for post-training analysis
+                full_weights = np.zeros(self.n_estimators)
+                full_weights[:len(w)] = w
+                self.iteration_weights.append(full_weights.copy())
 
-# 3) Choose a set of lambda values to explore (from 10^0 up to 10^6)
-lambda_values = np.logspace(2, 6, 20)  # [1, 10, 100, 1e3, 1e4, 1e5, 1e6]
+            # fit a new tree to residuals of latest ensemble prediction
+            tree = DecisionTreeRegressor(max_depth=self.max_depth, random_state=42)
+            tree.fit(self.X_train, residuals)
 
-# Containers for results
-cond_numbers = []     # Condition number of (F·F^T + λ I)
-train_mses   = []     # Final training MSE
-val_mses     = []     # Final validation MSE
+            # obtain latest tree's predictions on both training and validation data
+            f_train = tree.predict(self.X_train)
+            f_val   = tree.predict(self.X_val)
 
-for lambda_reg in lambda_values:
-    # ---- Build the ensemble, stagewise ----
-    F_train = []  # list of shape (n_trees, n_samples_train)
-    F_val   = []  # list of shape (n_trees, n_samples_val)
+            # save latest residual prediction series to tree prediction matrices
+            F_train.append(f_train)
+            F_val.append(f_val)
+            
+        F_matrix_final = np.vstack(F_train)
+        A_final = F_matrix_final @ F_matrix_final.T + self.lambda_reg * np.eye(self.n_estimators)
+        b_final = F_matrix_final @ self.y_train
+        
+        # solve Aw = b for the final weights w
+        self.final_weights = np.linalg.solve(A_final, b_final)
+        
+        eigvals = np.linalg.eigvalsh(A_final)
+        self.cond_number = eigvals.max() / eigvals.min()
+        
+        # final predictions and MSE
+        final_train_pred = F_matrix_final.T @ self.final_weights
+        final_val_pred = np.vstack(F_val).T @ self.final_weights
+        self.final_train_mse = mean_squared_error(self.y_train, final_train_pred)
+        self.final_val_mse = mean_squared_error(self.y_val, final_val_pred)
+        
+        # store final weights and MSE for post-training analysis
+        final_weights_padded = np.zeros(self.n_estimators)
+        final_weights_padded[:len(self.final_weights)] = self.final_weights
+        self.iteration_weights.append(final_weights_padded)
+        self.iteration_train_mse.append(self.final_train_mse)
+        self.iteration_val_mse.append(self.final_val_mse)
+        self.tree_strengths = np.array([np.std(tree_pred) for tree_pred in F_train])
 
-    for i in range(n_estimators):
-        if i == 0:
-            # First iteration: no trees yet, so residual = y_train
-            residuals = y_train.copy()
-        else:
-            # Form the matrix F (n_trees × n_samples)
-            F_mat = np.vstack(F_train)  # shape = (i, n_train)
-            # Build A = F · F^T + λ I
-            A = F_mat @ F_mat.T + lambda_reg * np.eye(i)
-            # Build b = F · y_train
-            b = F_mat @ y_train
+    
 
-            # Solve A·w = b
-            w = np.linalg.solve(A, b)
-            # Compute partial prediction on the training set
-            train_pred_partial = w @ F_mat  # shape = (n_train,)
-            # New residual for this iteration
-            residuals = y_train - train_pred_partial
+if __name__ == "__main__":
+    # create a synthetic regression dataset
+    X, y = make_regression(n_samples=1000, n_features=10, noise=15.0, random_state=42)
+    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.3, random_state=42)
 
-        # Fit a new tree to (X_train, residuals)
-        tree = DecisionTreeRegressor(max_depth=max_depth, random_state=42)
-        tree.fit(X_train, residuals)
+    # # load a real regression dataset
+    # california = fetch_california_housing()
+    # X, y = california.data, california.target
+    # X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.3, random_state=42)
 
-        # Save its predictions (f_i) on both train and val
-        f_train = tree.predict(X_train)  # shape = (n_train,)
-        f_val   = tree.predict(X_val)    # shape = (n_val,)
+    # common parameters
+    n_estimators = 30
+    max_depth    = 3
 
-        F_train.append(f_train)
-        F_val.append(f_val)
+    # choose a set of lambda values to explore (from 1 up to 10^6)
+    lambda_values = np.logspace(0, 6, 20)
 
-    # ---- Once all trees are built, do the final CG solve ----
-    F_mat   = np.vstack(F_train)  # shape = (n_trees, n_train)
-    A_final = F_mat @ F_mat.T + lambda_reg * np.eye(n_estimators)
-    b_final = F_mat @ y_train
+    cond_numbers = []     # condition number of (F·F^T + λ I)
+    train_mses   = []     # final training MSEs
+    val_mses     = []     # final validation MSEs
+    for l in lambda_values:
+        print(f"\nProcessing λ = {l:.1e}")
+        ridge_booster = RidgeBooster(X_val=X_val, X_train=X_train, y_train=y_train, y_val=y_val, n_estimators=n_estimators, max_depth=max_depth, lambda_reg=l)
+        ridge_booster.fit_model()
+        # Store results
+        cond_numbers.append(ridge_booster.cond_number)
+        train_mses.append(ridge_booster.train_mse)
+        val_mses.append(ridge_booster.val_mse)
+    
+    # ---- plotting of key results ----
+    plt.figure(figsize=(12, 4))
 
-    # Solve (A_final) w = b_final
-    final_w, info_final = np.linalg.solve(A_final, b_final)
+    # condition number vs λ
+    plt.subplot(1, 2, 1)
+    plt.semilogx(lambda_values, cond_numbers, marker='o', color='darkorange')
+    plt.title("Condition Number vs. λ (CG Ridge)")
+    plt.xlabel("λ")
+    plt.ylabel("Condition Number of (F·Fᵀ + λI)")
+    plt.grid(True)
 
-    # Compute condition number of A_final
-    eigvals = np.linalg.eigvalsh(A_final)
-    cond_num = eigvals.max() / eigvals.min()
-    cond_num = np.linalg.cond(A_final)
+    # train/val MSE vs λ
+    plt.subplot(1, 2, 2)
+    plt.semilogx(lambda_values, train_mses, marker='s', label="Train MSE", color='royalblue')
+    plt.semilogx(lambda_values, val_mses,   marker='^', label="Val MSE",   color='firebrick')
+    plt.title("Train/Validation MSE vs. λ")
+    plt.xlabel("λ")
+    plt.ylabel("MSE")
+    plt.legend()
+    plt.grid(True)
 
-
-    # Compute final predictions & MSE on train/val
-    train_preds = final_w @ F_mat                       # shape = (n_train,)
-    val_preds   = final_w @ np.vstack(F_val)            # shape = (n_val,)
-
-    train_mse = mean_squared_error(y_train, train_preds)
-    val_mse   = mean_squared_error(y_val, val_preds)
-
-    # Store results
-    cond_numbers.append(cond_num)
-    train_mses.append(train_mse)
-    val_mses.append(val_mse)
-
-# ---- Plotting ----
-plt.figure(figsize=(12, 4))
-
-# (a) Condition number vs λ
-plt.subplot(1, 2, 1)
-plt.semilogx(lambda_values, cond_numbers, marker='o', color='darkorange')
-plt.title("Condition Number vs. λ (Ridge)")
-plt.xlabel("λ")
-plt.ylabel("Condition Number of (F·Fᵀ + λI)")
-plt.grid(True)
-
-# (b) Train/Val MSE vs λ
-plt.subplot(1, 2, 2)
-plt.semilogx(lambda_values, train_mses, marker='s', label="Train MSE", color='royalblue')
-plt.semilogx(lambda_values, val_mses,   marker='^', label="Val MSE",   color='firebrick')
-plt.title("Train/Validation MSE vs. λ")
-plt.xlabel("λ")
-plt.ylabel("MSE")
-plt.legend()
-plt.grid(True)
-
-plt.tight_layout()
-plt.show()
+    plt.tight_layout()
+    plt.show()

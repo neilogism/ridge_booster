@@ -36,7 +36,9 @@ where $F \in \mathcal{R}^{N \times T}$ is the matrix of tree predictions.
 **Conjugate Gradient Approximation**: Numerically stable alternative using iterative CG solver
 
 ## Methodology Summary
-The ridge booster specification was implemented in Python and compared to sklearn's decision tree regressor implementation with respect to a variety of performance metrics. These included mean-square error (MSE), overfitting (validation MSE - training MSE), and training time. In addition to these comparative metrics, matrix condition number analysis was performed specifically on the ridge booster to assess its numerical stability. Figures were generated to visualize and quantify the effects of variables such as hyperparameters and dataset properties (i.e. standard deviations of the training and test datasets) on performance.
+The ridge booster specification was implemented in Python. Various Python scripts were used to generate data and figures for analysis. A benchmarking program compared the ridge booster's performance to a control booster (sklearn's DecisionTreeRegressor with a fixed learning rate hyperparameter) on several standard regression datasets. The competing algorithms were compared with respect to a variety of performance metrics. These included mean square error (MSE), overfitting (validation MSE - training MSE), and training time.
+
+In addition to these comparative metrics, some of the ridge booster's distinct properties were considered in isolation. Matrix condition number analysis was performed specifically on the ridge booster to assess its numerical stability. Moreover, the ridge booster implementation saved full histories of its weight updates and ensemble predictions. These histories were used to gain insights on the stability of the weight updates and how the training process negotiated the bias-variance tradeoff.
 
 ## Empirical Results
 
@@ -47,37 +49,43 @@ The ridge booster specification was implemented in Python and compared to sklear
 ![California Housing Results](data/images/results_california.png)
 
 ### Results of Noise Analysis 
-![California Housing Results](data/images/noise_analysis.png)
+![Results of Noise Analysis](data/images/noise_analysis.png)
 
-## Key Findings
+### Weight and MSE Evolution
+![Weight and MSE Evolution](data/images/weight_and_mse_evolution.png)
 
-- **Reduced hyperparameter sensitivity**: Ridge variants (purple/orange lines) show flatter validation curves compared to Fixed LR, indicating less sensitivity to hyperparameter selection
+### Lambda Performance Curves
+![Lambda Performance Curves](data/images/lambda_performance_curves.png)
+
+### Post-Training Details
+![Post-Training Details](data/images/post_training_details.png)
+
+## Key Findings and Limitations
+
+- **Reduced sensitivity of MSE to hyperparameter choices**: Ridge variants (purple/orange lines) show flatter validation curves compared to Fixed LR, indicating less sensitivity to hyperparameter selection
 - **Comparable best-case accuracy**: Ridge CG achieves MSE of 0.287 vs Fixed LR's 0.270 on California housing, and MSE of 1610 vs Fixed LR's 1651 on the synthetic dataset, demonstrating competitive best-case accuracy.
-- **Improved convergence**: Ridge variants show faster initial learning,reaching lower MSE in fewer iterations
+- **Improved convergence under certain conditions**: Ridge variants show faster initial learning under certain conditions (see: **limitations** section),reaching lower MSE in fewer iterations.
 - **Training efficiency**: In addition to the faster convergence mentioned above, ridge methods achieve comparable training times for the same number of iterations (1.17-1.32s) to traditional approaches while requiring less hyperparameter tuning and requiring fewer iterations to achieve lower MSE values. 
-
-## Technical Implementation
-
-- **Language**: Python
-- **Key Libraries**: NumPy, Scikit-learn, SciPy
-- **Evaluation**: Custom benchmarking framework comparing multiple boosting variants
-- **Datasets**: Synthetic regression data (sklearn.make_regression) and California Housing dataset
-
-## Limitations
-
 - **Computational complexity**: Solving the ridge system involves matrix operations that scale as O(T²) in memory and O(T³) in computation, making the method impractical for very large ensembles (loosely > 1000 trees)
-- **Generalizability**: Current formulation applies to regression problems but not classification problems. It also assumes a loss function with a quadratic form.
+- **Least-squares regression only**: Current formulation applies to regression problems but not classification problems. It also assumes a loss function with a quadratic form.
 - **Numerical instability**: Closed-form solution sensitive to ill-conditioned matrices (theoretically mitigated by CG variant). However, this effect hasn't been observed in practice. Empirical results suggest that numerical stability is not the primary limitation with respect to MSE performance: the conjugate gradient approximation did not meaningfully improve model accuracy but maintained similar MSE performance to the closed-form variant. 
-- **Performance on Noisy Datasets**
+- **Vulnerability to Noisy Datasets**
 Empirical testing on synthetic data shows a fixed learning rate 'control' booster performing better than the experimental ridge booster on noisy data. As a Gaussian noise parameter was scaled up on a synthetic dataset, the control booster outperformed the experimental booster in terms of average-case MSE, worse-case MSE, and overfitting (validation MSE - training MSE) (crossover point is around a standard deviation of 100).
 
+In summary, empirical results and theoretical considerations indicate that the ridge booster has a narrower operating regime than traditional gradient boosting, but that it can significantly outperform traditional fixed-rate boosting within that regime. 
 
 ## Applications
 
 This methodology could benefit:
 - **Regression Analysis** on datasets with suitable properties (e.g. std < 100, < 1000 iterations needed to converge)
 - **Research applications** exploring adaptive ensemble methods
-- **Automated ML pipelines** where manual hyperparameter tuning is impractical
+- **Automated ML pipelines** where manual hyperparameter tuning is impractical and datasets have suitable properties
+
+## Technical Implementation
+- **Language**: Python
+- **Key Libraries**: NumPy, Scikit-learn, SciPy
+- **Evaluation**: Custom benchmarking framework comparing multiple boosting variants
+- **Datasets**: Synthetic regression data (sklearn.make_regression) and California Housing dataset
 
 ## Repository Structure
 
@@ -95,9 +103,6 @@ ridge-booster/
 ## Future Directions
 - Theoretical convergence analysis for CG approximation
 - More rigorous hypothesis testing
-- Tracking and analysis of model weight evolution
 - Test on more real-world datasets
-- Early stopping criteria to decrease training time
-- Integration with modern boosting frameworks (XGBoost, LightGBM)
-
+- Early stopping criteria to decrease training time and/or reduce overfitting
 ---

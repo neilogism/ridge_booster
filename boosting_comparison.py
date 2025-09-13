@@ -15,7 +15,7 @@ class BoostingComparison:
     A comprehensive comparison framework for different boosting methods.
     """
     
-    def __init__(self, n_estimators: int = 30, max_depth: int = 3, random_state: int = 42, n_samples: int = 1000, n_features: int = 10, noise: float = 15.0):
+    def __init__(self, n_estimators: int = 30, max_depth: int = 3, random_state: int = 42, n_samples: int = 100, n_features: int = 10, noise: float = 10000.0):
         self.n_estimators = n_estimators
         self.max_depth = max_depth
         self.random_state = random_state
@@ -98,7 +98,10 @@ class BoostingComparison:
                 F_mat_current = np.vstack(F_train)
                 A_current = F_mat_current @ F_mat_current.T + lambda_reg * np.eye(len(F_train))
                 b_current = F_mat_current @ y_train
-                w_current, _ = cg(A_current, b_current, maxiter=1000)
+                if exact:
+                    w_current = np.linalg.solve(A_current, b_current)
+                else:
+                    w_current, _ = cg(A_current, b_current, maxiter=1000)
                 
                 train_pred = w_current @ F_mat_current
                 val_pred = w_current @ np.vstack(F_val)
@@ -110,7 +113,10 @@ class BoostingComparison:
         F_mat_final = np.vstack(F_train)
         A_final = F_mat_final @ F_mat_final.T + lambda_reg * np.eye(self.n_estimators)
         b_final = F_mat_final @ y_train
-        final_w, _ = cg(A_final, b_final, maxiter=1000)
+        if exact:
+            final_w = np.linalg.solve(A_final, b_final)
+        else:
+            final_w, _ = cg(A_final, b_final, maxiter=1000)
         
         # Final predictions
         train_preds = final_w @ F_mat_final
