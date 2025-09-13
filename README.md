@@ -64,7 +64,7 @@ In addition to these comparative metrics, some of the ridge booster's distinct p
 
 - **Reduced sensitivity of MSE to hyperparameter choices**: Ridge variants (purple/orange lines) show flatter validation curves compared to Fixed LR, indicating less sensitivity to hyperparameter selection
 - **Comparable best-case accuracy**: Ridge CG achieves MSE of 0.287 vs Fixed LR's 0.270 on California housing, and MSE of 1610 vs Fixed LR's 1651 on the synthetic dataset, demonstrating competitive best-case accuracy.
-- **Improved convergence under certain conditions**: Ridge variants show faster initial learning under certain conditions (see: **limitations** section),reaching lower MSE in fewer iterations.
+- **Improved convergence under certain conditions**: Ridge variants show faster initial learning on datasets with low noise (roughly speaking, this means a Gaussian noise process with a standard deviation under 100), reaching lower MSE in fewer iterations.
 - **Training efficiency**: In addition to the faster convergence mentioned above, ridge methods achieve comparable training times for the same number of iterations (1.17-1.32s) to traditional approaches while requiring less hyperparameter tuning and requiring fewer iterations to achieve lower MSE values. 
 - **Computational complexity**: Solving the ridge system involves matrix operations that scale as O(T²) in memory and O(T³) in computation, making the method impractical for very large ensembles (loosely > 1000 trees)
 - **Least-squares regression only**: Current formulation applies to regression problems but not classification problems. It also assumes a loss function with a quadratic form.
@@ -77,7 +77,7 @@ In summary, empirical results and theoretical considerations indicate that the r
 ## Applications
 
 This methodology could benefit:
-- **Regression Analysis** on datasets with suitable properties (e.g. std < 100, < 1000 iterations needed to converge)
+- **Regression Analysis** on datasets with suitable properties (e.g. noise with std < 100, < 1000 iterations needed to converge)
 - **Research applications** exploring adaptive ensemble methods
 - **Automated ML pipelines** where manual hyperparameter tuning is impractical and datasets have suitable properties
 
